@@ -1,0 +1,33 @@
+---
+description: Install Ice only to /Applications — never duplicate installs
+alwaysApply: true
+---
+
+# Ice install target
+
+Always install the built app to the **single global location**:
+
+```
+/Applications/Ice.app
+```
+
+## Install workflow
+
+1. Build Release: `xcodebuild -scheme Ice -configuration Release -derivedDataPath .derivedData CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=NO build` (use `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` if needed).
+2. Quit Ice: `pkill -x Ice`
+3. Install with `ditto` (do **not** copy to `~/Applications`, Desktop, or DerivedData paths):
+   ```bash
+   ditto .derivedData/Build/Products/Release/Ice.app /Applications/Ice.app
+   ```
+4. Do **not** run `codesign --force --deep` after install unless explicitly requested — it changes the ad-hoc signature and breaks TCC permissions.
+5. Launch: `open /Applications/Ice.app`
+
+## Avoid duplicate Ice apps
+
+- **Never** install or tell the user to run Ice from `.derivedData/Build/Products/` or `~/Library/Developer/Xcode/DerivedData/.../Ice.app`.
+- Those are Xcode build artifacts. Running them creates a second TCC identity and duplicate entries in System Settings (Accessibility, Input Monitoring, etc.).
+- If the user has two Ice entries in privacy settings, keep `/Applications/Ice.app` and remove the DerivedData/other path from the list.
+
+## After install (ad-hoc builds)
+
+Remind the user to re-grant **Accessibility** (remove old Ice entry, add `/Applications/Ice.app` with +) because each ad-hoc rebuild gets a new code signature.

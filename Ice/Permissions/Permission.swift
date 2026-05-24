@@ -3,10 +3,8 @@
 //  Ice
 //
 
-import AXSwift
 import Combine
 import Cocoa
-import ScreenCaptureKit
 
 // MARK: - Permission
 
@@ -19,20 +17,25 @@ class Permission: ObservableObject, Identifiable {
 
     /// The title of the permission.
     let title: String
+
     /// Descriptive details for the permission.
     let details: [String]
+
     /// A Boolean value that indicates if the app can work without this permission.
     let isRequired: Bool
 
     /// The URL of the settings pane to open.
     private let settingsURL: URL?
+
     /// The function that checks permissions.
     private let check: () -> Bool
+
     /// The function that requests permissions.
     private let request: () -> Void
 
     /// Observer that runs on a timer to check permissions.
     private var timerCancellable: AnyCancellable?
+
     /// Observer that observes the ``hasPermission`` property.
     private var hasPermissionCancellable: AnyCancellable?
 
@@ -124,12 +127,12 @@ final class AccessibilityPermission: Permission {
                 "Arrange menu bar items.",
             ],
             isRequired: true,
-            settingsURL: nil,
+            settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"),
             check: {
-                checkIsProcessTrusted()
+                AXHelpers.isProcessTrusted()
             },
             request: {
-                checkIsProcessTrusted(prompt: true)
+                _ = AXHelpers.isProcessTrusted(prompt: true)
             }
         )
     }
@@ -142,7 +145,7 @@ final class ScreenRecordingPermission: Permission {
         super.init(
             title: "Screen Recording",
             details: [
-                "Edit the menu bar's appearance.",
+                "Change the menu bar's appearance.",
                 "Display images of individual menu bar items.",
             ],
             isRequired: false,

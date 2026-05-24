@@ -36,7 +36,7 @@ final class AppPermissions: ObservableObject {
     @Published private(set) var permissionsState: PermissionsState = .missing
 
     /// Storage for internal observers.
-    private var cancellable: AnyCancellable?
+    private var cancellables = Set<AnyCancellable>()
 
     /// The permissions required for full app functionality.
     var allPermissions: [Permission] {
@@ -51,11 +51,21 @@ final class AppPermissions: ObservableObject {
     /// Creates a new permissions manager.
     init() {
         self.updatePermissionsState()
-        self.cancellable = Publishers.MergeMany(allPermissions.map { $0.$hasPermission })
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.updatePermissionsState()
-            }
+        for permission in allPermissions {
+            permission.$hasPermission
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    updatePermissionsState()
+                    objectWillChange.send()
+                    if screenRecording.hasPermission {
+                        _ = ScreenCapture.cachedCheckPermissions(reset: true)
+                    }
+                }
+                .store(in: &cancellables)
+        }
     }
 
     /// Updates the current permissions state.

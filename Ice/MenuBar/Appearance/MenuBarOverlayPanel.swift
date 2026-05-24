@@ -169,7 +169,7 @@ final class MenuBarOverlayPanel: NSPanel {
             }
             Task {
                 try? await Task.sleep(for: .milliseconds(100))
-                if self.owningScreen != NSScreen.main {
+                if self.owningScreen != NSScreen.screenWithActiveMenuBar {
                     self.updateTaskContext.cancelTask(for: .applicationMenuFrame)
                 }
             }

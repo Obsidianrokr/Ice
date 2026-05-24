@@ -156,6 +156,19 @@ func CGSGetWindowLevel(
     _ outLevel: inout CGWindowLevel
 ) -> CGError
 
+// MARK: - CGWindowList
+
+/// Captures an image from the specified windows.
+///
+/// This API is unavailable in the macOS 26 SDK, but remains functional at
+/// runtime and is still required to capture offscreen menu bar item windows.
+@_silgen_name("CGWindowListCreateImageFromArray")
+func CGWindowListCreateImageFromArray(
+    _ screenBounds: CGRect,
+    _ windowArray: CFArray,
+    _ imageOption: CGWindowImageOption
+) -> Unmanaged<CGImage>?
+
 // MARK: - ProcessSerialNumber
 
 @_silgen_name("GetProcessForPID")

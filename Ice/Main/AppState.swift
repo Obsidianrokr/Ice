@@ -62,9 +62,7 @@ final class AppState: ObservableObject {
         settings.performSetup(with: self)
         menuBarManager.performSetup(with: self)
 
-        if #available(macOS 26.0, *) {
-            await MenuBarItemService.Connection.shared.start()
-        }
+        await MenuBarItemService.Connection.shared.start()
 
         appearanceManager.performSetup(with: self)
         hidEventManager.performSetup(with: self)

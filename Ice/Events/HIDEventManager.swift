@@ -444,13 +444,8 @@ extension HIDEventManager {
 extension HIDEventManager {
     /// Returns the best screen to use for event manager calculations.
     func bestScreen(appState: AppState) -> NSScreen? {
-        guard
-            appState.activeSpace.isFullscreen,
-            let screen = NSScreen.screenWithMouse
-        else {
-            return NSScreen.main
-        }
-        return screen
+        let iceIconFrame = appState.menuBarManager.controlItem(withName: .visible)?.frame
+        return NSScreen.bestForMenuBar(iceIconFrame: iceIconFrame)
     }
 
     /// A Boolean value that indicates whether the mouse pointer is within

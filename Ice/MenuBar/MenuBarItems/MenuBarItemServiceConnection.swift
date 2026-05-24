@@ -8,7 +8,6 @@ import OSLog
 
 // MARK: - MenuBarItemService.Connection
 
-@available(macOS 26.0, *)
 extension MenuBarItemService {
     /// A connection to the `MenuBarItemService` XPC service.
     final class Connection: Sendable {
@@ -77,7 +76,6 @@ extension MenuBarItemService {
 
 // MARK: - MenuBarItemService.Session
 
-@available(macOS 26.0, *)
 extension MenuBarItemService {
     /// A wrapper around an XPC session.
     private final class Session: Sendable {
@@ -104,7 +102,9 @@ extension MenuBarItemService {
                     logger.warning("Session was cancelled with error \(error.localizedDescription)")
                     self.session = nil
                 }
-                session.setPeerRequirement(.isFromSameTeam())
+                if let peerRequirement = MenuBarItemService.peerRequirement {
+                    session.setPeerRequirement(peerRequirement)
+                }
                 session.setTargetQueue(queue)
                 try session.activate()
                 self.session = session

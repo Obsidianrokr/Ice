@@ -38,11 +38,7 @@ struct AboutSettingsPane: View {
     }
 
     var body: some View {
-        if #available(macOS 26.0, *) {
-            contentForm(cornerStyle: .continuous)
-        } else {
-            contentForm(cornerStyle: .circular)
-        }
+        contentForm(cornerStyle: .continuous)
     }
 
     @ViewBuilder
@@ -63,8 +59,10 @@ struct AboutSettingsPane: View {
             Spacer(minLength: 0)
                 .frame(maxHeight: 20)
 
-            updatesSection
-                .layoutPriority(1)
+            if UpdatesManager.isEnabled {
+                updatesSection
+                    .layoutPriority(1)
+            }
         }
         .padding(.top, 5)
         .padding([.horizontal, .bottom], 30)

@@ -144,23 +144,44 @@ struct AdvancedSettingsPane: View {
     @ViewBuilder
     private var allPermissions: some View {
         ForEach(appState.permissions.allPermissions) { permission in
-            LabeledContent {
-                if permission.hasPermission {
-                    Label {
-                        Text("Permission Granted")
-                    } icon: {
-                        Image(systemName: "checkmark.circle")
-                            .foregroundStyle(.green)
+            VStack(alignment: .leading, spacing: 6) {
+                LabeledContent {
+                    if permission.hasPermission {
+                        Label {
+                            Text("Permission Granted")
+                        } icon: {
+                            Image(systemName: "checkmark.circle")
+                                .foregroundStyle(.green)
+                        }
+                    } else {
+                        Button("Open System Settings") {
+                            permission.performRequest()
+                        }
                     }
-                } else {
-                    Button("Grant Permission") {
-                        permission.performRequest()
-                    }
+                } label: {
+                    Text(permission.title)
                 }
-            } label: {
-                Text(permission.title)
+                .frame(height: 22)
+
+                if !permission.hasPermission {
+                    permissionHint(for: permission)
+                }
             }
-            .frame(height: 22)
+        }
+    }
+
+    @ViewBuilder
+    private func permissionHint(for permission: Permission) -> some View {
+        if permission is AccessibilityPermission || permission is ScreenRecordingPermission {
+            Text(
+                """
+                If \(permission.title) is already enabled in System Settings, remove Ice with −, \
+                then add /Applications/Ice.app again with +. Rebuilt apps need to be re-authorized.
+                """
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

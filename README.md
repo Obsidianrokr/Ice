@@ -81,9 +81,9 @@ brew install --cask jordanbaird-ice
 - [x] Automatic updates
 - [ ] Menu bar widgets
 
-## Why does Ice only support macOS 14 and later?
+## Why does Ice only support macOS 26 and later?
 
-Ice uses a number of system APIs that are available starting in macOS 14. As such, there are no plans to support earlier versions of macOS.
+Ice targets macOS 26 (Tahoe) and uses system APIs — including menu bar item source process identification and ScreenCaptureKit integration — that require this release. Earlier versions of macOS are not supported.
 
 ## Gallery
 

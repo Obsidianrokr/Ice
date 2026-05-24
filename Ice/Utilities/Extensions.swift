@@ -507,6 +507,26 @@ extension NSScreen {
         screens.first { $0.frame.contains(NSEvent.mouseLocation) }
     }
 
+    /// Returns the screen that should be used for menu bar calculations.
+    ///
+    /// Prefer the screen under the mouse, then the screen with the active menu bar,
+    /// then the screen containing the Ice icon.
+    static func bestForMenuBar(iceIconFrame: CGRect? = nil) -> NSScreen? {
+        if let screenWithMouse {
+            return screenWithMouse
+        }
+        if let screenWithActiveMenuBar {
+            return screenWithActiveMenuBar
+        }
+        if
+            let iceIconFrame,
+            let screen = screens.first(where: { $0.frame.intersects(iceIconFrame) })
+        {
+            return screen
+        }
+        return main
+    }
+
     /// The screen with the active menu bar.
     static var screenWithActiveMenuBar: NSScreen? {
         guard let displayID = Bridging.getActiveMenuBarDisplayID() else {
@@ -577,8 +597,8 @@ extension NSScreen {
         // the app menu's frame on inactive screens, and returning `nil` if it overlaps
         // with the notch.
         if
-            let mainScreen = NSScreen.main,
-            self != mainScreen,
+            let activeMenuBarScreen = NSScreen.screenWithActiveMenuBar,
+            self != activeMenuBarScreen,
             let notchedScreen = NSScreen.screens.first(where: { $0.hasNotch }),
             let leftArea = notchedScreen.auxiliaryTopLeftArea,
             applicationMenuFrame.width >= leftArea.maxX
@@ -587,6 +607,34 @@ extension NSScreen {
         }
 
         return applicationMenuFrame
+    }
+}
+
+// MARK: - NSWindow
+
+extension NSWindow {
+    /// The window's Core Graphics identifier, if one is available.
+    ///
+    /// `windowNumber` is `-1` until the window is shown. Converting that
+    /// value directly to `CGWindowID` can crash on macOS 26.
+    var cgWindowID: CGWindowID? {
+        guard windowNumber >= 0, windowNumber <= Int(UInt32.max) else {
+            return nil
+        }
+        return CGWindowID(windowNumber)
+    }
+
+    /// Publishes valid Core Graphics window identifiers as they become available.
+    var cgWindowIDPublisher: AnyPublisher<CGWindowID, Never> {
+        publisher(for: \.windowNumber)
+            .compactMap { windowNumber in
+                guard windowNumber >= 0, windowNumber <= Int(UInt32.max) else {
+                    return nil
+                }
+                return CGWindowID(windowNumber)
+            }
+            .removeDuplicates()
+            .eraseToAnyPublisher()
     }
 }
 

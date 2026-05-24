@@ -391,8 +391,9 @@ final class ControlItem {
                 }
             case .hideSection:
                 updateStatusItemVisibility(true)
-                button.appearsDisabled = true
+                button.appearsDisabled = false
                 button.isHighlighted = false
+                button.image = Self.transparentImage
             }
         }
     }
@@ -448,6 +449,30 @@ final class ControlItem {
         let cached = ControlItemDefaults[.preferredPosition, autosaveName]
         statusItem.isVisible = false
         ControlItemDefaults[.preferredPosition, autosaveName] = cached
+    }
+
+    /// Refreshes the control item after the display configuration changes.
+    func refreshLayout() {
+        frame = nil
+        onScreenFrame = nil
+
+        let autosaveName = statusItem.autosaveName as String
+        let cached = ControlItemDefaults[.preferredPosition, autosaveName]
+        let wasVisible = statusItem.isVisible
+
+        if wasVisible {
+            statusItem.isVisible = false
+            statusItem.isVisible = true
+            ControlItemDefaults[.preferredPosition, autosaveName] = cached
+        }
+
+        updateStatusItem()
+
+        if let window = statusItem.button?.window {
+            frame = window.frame
+            window.contentView?.needsLayout = true
+            statusItem.button?.needsDisplay = true
+        }
     }
 
     /// Performs the control item's action.
@@ -556,15 +581,17 @@ final class ControlItem {
 
         menu.addItem(.separator())
 
-        let checkForUpdatesItem = NSMenuItem(
-            title: "Check for Updates…",
-            action: #selector(checkForUpdates),
-            keyEquivalent: ""
-        )
-        checkForUpdatesItem.target = self
-        menu.addItem(checkForUpdatesItem)
+        if UpdatesManager.isEnabled {
+            let checkForUpdatesItem = NSMenuItem(
+                title: "Check for Updates…",
+                action: #selector(checkForUpdates),
+                keyEquivalent: ""
+            )
+            checkForUpdatesItem.target = self
+            menu.addItem(checkForUpdatesItem)
 
-        menu.addItem(.separator())
+            menu.addItem(.separator())
+        }
 
         let quitItem = NSMenuItem(
             title: "Quit Ice",
@@ -606,6 +633,17 @@ final class ControlItem {
         }
         appState.updatesManager.checkForUpdates()
     }
+}
+
+private extension ControlItem {
+    /// A transparent image used for expanded section dividers.
+    static let transparentImage: NSImage = {
+        NSImage(size: NSSize(width: 1, height: 1), flipped: false) { rect in
+            NSColor.clear.setFill()
+            rect.fill()
+            return true
+        }
+    }()
 }
 
 // MARK: - ControlItemDefaults
@@ -659,10 +697,7 @@ enum ControlItemDefaults {
         if ControlItemDefaults[.visible, autosaveName] == nil {
             ControlItemDefaults[.visible, autosaveName] = true
         }
-        if
-            #available(macOS 26.0, *),
-            ControlItemDefaults[.visibleCC, autosaveName] == nil
-        {
+        if ControlItemDefaults[.visibleCC, autosaveName] == nil {
             ControlItemDefaults[.visibleCC, autosaveName] = true
         }
     }

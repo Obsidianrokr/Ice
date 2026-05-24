@@ -123,16 +123,13 @@ struct MenuBarItem: CustomStringConvertible {
             toTitleCase(bestName.replacing(/Menu.*/, with: ""))
         case .controlCenter:
             if let match = title.prefixMatch(of: /Hearing/) {
-                // Changed from "Hearing" to "Hearing_GlowE" in macOS 15.4
                 toTitleCase(match.output)
             } else {
                 toTitleCase(title)
             }
         case .systemUIServer:
             if let match = title.firstMatch(of: /TimeMachine/) {
-                // Sonoma:  "TimeMachine.TMMenuExtraHost"
-                // Sequoia: "TimeMachineMenuExtra.TMMenuExtraHost"
-                // Tahoe:   "com.apple.menuextra.TimeMachine"
+                // macOS 26: "com.apple.menuextra.TimeMachine"
                 toTitleCase(match.output)
             } else {
                 toTitleCase(title)
@@ -178,7 +175,6 @@ struct MenuBarItem: CustomStringConvertible {
     /// This initializer does not perform validity checks on its parameters.
     /// Only call it if you are certain the window is a valid menu bar item
     /// and the source pid belongs to the application that created it.
-    @available(macOS 26.0, *)
     private init(uncheckedItemWindow itemWindow: WindowInfo, sourcePID: pid_t?) {
         self.tag = MenuBarItemTag(uncheckedItemWindow: itemWindow, sourcePID: sourcePID)
         self.windowID = itemWindow.windowID
@@ -242,7 +238,6 @@ extension MenuBarItem {
 
     /// Creates and returns a list of menu bar items using experimental
     /// source pid retrieval for macOS 26.
-    @available(macOS 26.0, *)
     private static func getMenuBarItemsExperimental(on display: CGDirectDisplayID?, option: ListOption) async -> [MenuBarItem] {
         var items = [MenuBarItem]()
         for window in getMenuBarItemWindows(on: display, option: option) {
@@ -253,14 +248,6 @@ extension MenuBarItem {
         return items
     }
 
-    /// Creates and returns a list of menu bar items, defaulting to the
-    /// legacy source pid behavior, prior to macOS 26.
-    private static func getMenuBarItemsLegacyMethod(on display: CGDirectDisplayID?, option: ListOption) -> [MenuBarItem] {
-        getMenuBarItemWindows(on: display, option: option).map { window in
-            MenuBarItem(uncheckedItemWindow: window)
-        }
-    }
-
     /// Creates and returns a list of menu bar items for the given display.
     ///
     /// - Parameters:
@@ -269,11 +256,7 @@ extension MenuBarItem {
     ///   - option: Options that filter the returned list. Pass an empty option set
     ///     to return all available menu bar items.
     static func getMenuBarItems(on display: CGDirectDisplayID? = nil, option: ListOption) async -> [MenuBarItem] {
-        if #available(macOS 26.0, *) {
-            await getMenuBarItemsExperimental(on: display, option: option)
-        } else {
-            getMenuBarItemsLegacyMethod(on: display, option: option)
-        }
+        await getMenuBarItemsExperimental(on: display, option: option)
     }
 }
 
@@ -320,7 +303,6 @@ private extension MenuBarItemTag {
     /// This initializer does not perform validity checks on its parameters.
     /// Only call it if you are certain the window is a valid menu bar item
     /// and the source pid belongs to the application that created it.
-    @available(macOS 26.0, *)
     init(uncheckedItemWindow itemWindow: WindowInfo, sourcePID: pid_t?) {
         self.namespace = Namespace(uncheckedItemWindow: itemWindow, sourcePID: sourcePID)
         self.title = itemWindow.title ?? ""
@@ -356,13 +338,18 @@ private extension MenuBarItemTag.Namespace {
     /// This initializer does not perform validity checks on its parameters.
     /// Only call it if you are certain the window is a valid menu bar item
     /// and the source pid belongs to the application that created it.
-    @available(macOS 26.0, *)
     init(uncheckedItemWindow itemWindow: WindowInfo, sourcePID: pid_t?) {
         // Most apps have a bundle ID, but we should be able to handle apps
         // that don't. We should also be able to handle daemons and helpers,
         // which are more likely not to have a bundle ID.
         if let sourcePID, let app = NSRunningApplication(processIdentifier: sourcePID) {
             self = .optional(app.bundleIdentifier ?? app.localizedName)
+        } else if itemWindow.owningApplication?.bundleIdentifier == Constants.bundleIdentifier {
+            // Ice-owned windows can be identified without a source PID.
+            self = .ice
+        } else if Self.isIceControlItemTitle(itemWindow.title) {
+            // Control items keep stable titles even when source PID lookup fails.
+            self = .ice
         } else if let uuid = Self.uuidCache[itemWindow.windowID] {
             self = .uuid(uuid)
         } else {
@@ -370,5 +357,14 @@ private extension MenuBarItemTag.Namespace {
             Self.uuidCache[itemWindow.windowID] = uuid
             self = .uuid(uuid)
         }
+    }
+
+    /// Returns a Boolean value indicating whether the given title belongs
+    /// to one of Ice's control items.
+    private static func isIceControlItemTitle(_ title: String?) -> Bool {
+        guard let title else {
+            return false
+        }
+        return ControlItem.Identifier(rawValue: title) != nil
     }
 }

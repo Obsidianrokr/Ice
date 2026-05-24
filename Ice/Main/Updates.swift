@@ -9,6 +9,9 @@ import SwiftUI
 /// Manager for app updates.
 @MainActor
 final class UpdatesManager: NSObject, ObservableObject {
+    /// A Boolean value that indicates whether Sparkle updates are enabled.
+    static let isEnabled = Version.updatesEnabled
+
     /// A Boolean value that indicates whether the user can check for updates.
     @Published var canCheckForUpdates = false
 
@@ -20,7 +23,7 @@ final class UpdatesManager: NSObject, ObservableObject {
 
     /// The underlying updater controller.
     private(set) lazy var updaterController = SPUStandardUpdaterController(
-        startingUpdater: true,
+        startingUpdater: false,
         updaterDelegate: self,
         userDriverDelegate: self
     )
@@ -55,7 +58,12 @@ final class UpdatesManager: NSObject, ObservableObject {
     /// Performs the initial setup of the manager.
     func performSetup(with appState: AppState) {
         self.appState = appState
+        guard Self.isEnabled else {
+            return
+        }
         _ = updaterController
+        updater.automaticallyChecksForUpdates = false
+        updater.automaticallyDownloadsUpdates = false
         configureCancellables()
     }
 
@@ -69,6 +77,9 @@ final class UpdatesManager: NSObject, ObservableObject {
 
     /// Checks for app updates.
     @objc func checkForUpdates() {
+        guard Self.isEnabled else {
+            return
+        }
         #if DEBUG
         // Checking for updates hangs in debug mode.
         let alert = NSAlert()

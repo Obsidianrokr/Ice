@@ -13,9 +13,39 @@ enum AXHelpers {
         attributes: .concurrent
     )
 
+    private static let accessibilityProbeCallback: CGEventTapCallBack = { _, _, event, _ in
+        Unmanaged.passUnretained(event)
+    }
+
+    /// Returns a Boolean value that indicates whether the process can
+    /// receive accessibility events according to the live TCC database.
+    ///
+    /// Unlike ``checkIsProcessTrusted(prompt:)``, this method does not
+    /// rely on a cached value and reflects the current code signature.
+    static func hasLiveAccessibilityAccess() -> Bool {
+        let eventMask = CGEventMask(1 << CGEventType.flagsChanged.rawValue)
+        guard let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .listenOnly,
+            eventsOfInterest: eventMask,
+            callback: accessibilityProbeCallback,
+            userInfo: nil
+        ) else {
+            return false
+        }
+        CFMachPortInvalidate(tap)
+        return true
+    }
+
     @discardableResult
     static func isProcessTrusted(prompt: Bool = false) -> Bool {
-        queue.sync { checkIsProcessTrusted(prompt: prompt) }
+        queue.sync {
+            if hasLiveAccessibilityAccess() {
+                return true
+            }
+            return checkIsProcessTrusted(prompt: prompt)
+        }
     }
 
     static func element(at point: CGPoint) -> UIElement? {

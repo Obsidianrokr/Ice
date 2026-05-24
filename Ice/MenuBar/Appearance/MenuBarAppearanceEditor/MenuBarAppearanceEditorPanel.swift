@@ -11,7 +11,7 @@ import SwiftUI
 final class MenuBarAppearanceEditorPanel: NSPanel {
     /// The default screen to show the panel on.
     static var defaultScreen: NSScreen? {
-        NSScreen.screenWithMouse ?? NSScreen.main
+        NSScreen.bestForMenuBar()
     }
 
     /// The shared app state.

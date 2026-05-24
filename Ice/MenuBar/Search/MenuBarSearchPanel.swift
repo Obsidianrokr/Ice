@@ -49,7 +49,7 @@ final class MenuBarSearchPanel: NSPanel {
 
     /// The default screen to show the panel on.
     var defaultScreen: NSScreen? {
-        NSScreen.screenWithMouse ?? NSScreen.main
+        NSScreen.bestForMenuBar()
     }
 
     /// Overridden to always be `true`.
@@ -199,7 +199,7 @@ private struct MenuBarSearchContentView: View {
     }
 
     private var bottomBarPadding: CGFloat {
-        if #available(macOS 26.0, *) { 7 } else { 5 }
+        7
     }
 
     var body: some View {
@@ -405,11 +405,7 @@ private struct ShowItemButton: View {
     let action: () -> Void
 
     private var backgroundShape: some InsettableShape {
-        if #available(macOS 26.0, *) {
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
-        } else {
-            RoundedRectangle(cornerRadius: 3, style: .circular)
-        }
+        RoundedRectangle(cornerRadius: 5, style: .continuous)
     }
 
     var body: some View {
@@ -441,11 +437,7 @@ private struct BottomBarButtonStyle: ButtonStyle {
     @State private var isHovering = false
 
     private var borderShape: some InsettableShape {
-        if #available(macOS 26.0, *) {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-        } else {
-            RoundedRectangle(cornerRadius: 5, style: .circular)
-        }
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
     }
 
     func makeBody(configuration: Configuration) -> some View {
@@ -511,19 +503,15 @@ private struct MenuBarSearchItemView: View {
     }
 
     private var backgroundShape: some InsettableShape {
-        if #available(macOS 26.0, *) {
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-        } else {
-            RoundedRectangle(cornerRadius: 5, style: .circular)
-        }
+        RoundedRectangle(cornerRadius: 7, style: .continuous)
     }
 
     private var dimension: CGFloat {
-        if #available(macOS 26.0, *) { 26 } else { 24 }
+        26
     }
 
     private var padding: CGFloat {
-        if #available(macOS 26.0, *) { 6 } else { 8 }
+        6
     }
 
     var body: some View {

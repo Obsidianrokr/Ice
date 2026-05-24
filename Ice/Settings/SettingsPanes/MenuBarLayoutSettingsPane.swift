@@ -14,7 +14,7 @@ struct MenuBarLayoutSettingsPane: View {
     }
 
     var body: some View {
-        if !ScreenCapture.cachedCheckPermissions() {
+        if !appState.hasPermission(.screenRecording) {
             missingScreenRecordingPermissions
         } else if appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults {
             cannotArrange

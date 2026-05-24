@@ -161,10 +161,22 @@ struct PermissionsView: View {
                         Text("Permission Granted")
                             .foregroundStyle(.green)
                     } else {
-                        Text("Grant Permission")
+                        Text("Open System Settings")
                     }
                 }
                 .allowsHitTesting(!permission.hasPermission)
+
+                if !permission.hasPermission, permission is AccessibilityPermission {
+                    CalloutBox(
+                        """
+                        If Ice is already enabled in System Settings, remove it with the − button, \
+                        then add this app again with +. Rebuilt apps need to be re-authorized.
+                        """
+                    ) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundStyle(.yellow)
+                    }
+                }
 
                 if !permission.isRequired {
                     CalloutBox("Ice can work in a limited mode without this permission.") {

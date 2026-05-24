@@ -146,6 +146,13 @@ final class MenuBarManager: ObservableObject {
             }
             .store(in: &c)
 
+        NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
+            .debounce(for: 0.2, scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.handleScreenParametersChange()
+            }
+            .store(in: &c)
+
         // Hide application menus when a section is shown (if applicable).
         Publishers.MergeMany(sections.map { $0.controlItem.$state })
             .receive(on: DispatchQueue.main)
@@ -171,7 +178,11 @@ final class MenuBarManager: ObservableObject {
                 }
 
                 if sections.contains(where: { $0.controlItem.state == .showSection }) {
-                    guard let screen = NSScreen.main else {
+                    guard
+                        let screen = NSScreen.bestForMenuBar(
+                            iceIconFrame: controlItem(withName: .visible)?.frame
+                        )
+                    else {
                         return
                     }
 
@@ -342,6 +353,28 @@ final class MenuBarManager: ObservableObject {
     /// Returns the control item for the menu bar section with the given name.
     func controlItem(withName name: MenuBarSection.Name) -> ControlItem? {
         section(withName: name)?.controlItem
+    }
+
+    /// Resets menu bar state after the display configuration changes.
+    private func handleScreenParametersChange() {
+        iceBarPanel.close()
+
+        for section in sections {
+            if section.controlItem.state == .showSection {
+                section.hide()
+            }
+            section.controlItem.refreshLayout()
+        }
+
+        guard let appState else {
+            return
+        }
+
+        Task {
+            if ScreenCapture.cachedCheckPermissions(reset: true) {
+                await appState.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
+            }
+        }
     }
 }
 

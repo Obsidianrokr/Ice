@@ -11,21 +11,42 @@ enum ScreenCapture {
 
     // MARK: Permissions
 
-    /// Returns a Boolean value that indicates whether the app has screen
-    /// capture permissions.
-    static func checkPermissions() -> Bool {
-        for windowID in Bridging.getMenuBarWindowList(option: [.itemsOnly, .activeSpace]) {
+    /// Returns a Boolean value that indicates whether the app can capture
+    /// screen content according to the live TCC database.
+    ///
+    /// Unlike ``CGPreflightScreenCaptureAccess()``, this performs an actual
+    /// capture attempt and reflects the current code signature.
+    static func hasLiveScreenCaptureAccess() -> Bool {
+        if CGPreflightScreenCaptureAccess() {
+            return true
+        }
+
+        let windowIDs = Bridging.getMenuBarWindowList(option: [.itemsOnly, .activeSpace])
+        let currentPID = ProcessInfo.processInfo.processIdentifier
+
+        for windowID in windowIDs {
             guard
                 let window = WindowInfo(windowID: windowID),
-                window.owningApplication != .current // Skip windows we own.
+                window.ownerPID != currentPID
             else {
                 continue
             }
-            return window.title != nil
+            if captureWindow(with: windowID) != nil {
+                return true
+            }
         }
-        // CGPreflightScreenCaptureAccess() only returns an initial value,
-        // but we can use it as a fallback.
-        return CGPreflightScreenCaptureAccess()
+
+        for windowID in windowIDs where captureWindow(with: windowID) != nil {
+            return true
+        }
+
+        return false
+    }
+
+    /// Returns a Boolean value that indicates whether the app has screen
+    /// capture permissions.
+    static func checkPermissions() -> Bool {
+        hasLiveScreenCaptureAccess()
     }
 
     /// Returns a Boolean value that indicates whether the app has screen
@@ -36,27 +57,25 @@ enum ScreenCapture {
     /// result with a newly computed value.
     static func cachedCheckPermissions(reset: Bool = false) -> Bool {
         enum Context {
-            static var cachedResult: Bool?
+            static var cachedGranted = false
         }
-        if !reset, let result = Context.cachedResult {
-            return result
+        if reset {
+            Context.cachedGranted = false
+        }
+        if Context.cachedGranted {
+            return true
         }
         let result = checkPermissions()
-        Context.cachedResult = result
+        if result {
+            Context.cachedGranted = true
+        }
         return result
     }
 
     /// Requests screen capture permissions.
     static func requestPermissions() {
-        if #available(macOS 15.0, *) {
-            // CGRequestScreenCaptureAccess() is broken on macOS 15. We can
-            // try accessing SCShareableContent to trigger a request if the
-            // user doesn't have permissions.
-            // TODO: Find out if we still need this as of macOS 26.
-            SCShareableContent.getWithCompletionHandler { _, _ in }
-        } else {
-            CGRequestScreenCaptureAccess()
-        }
+        _ = CGRequestScreenCaptureAccess()
+        SCShareableContent.getWithCompletionHandler { _, _ in }
     }
 
     // MARK: Capture Window(s)
@@ -77,8 +96,8 @@ enum ScreenCapture {
         }
         let bounds = screenBounds ?? .null
         // ScreenCaptureKit doesn't support capturing images of offscreen menu bar
-        // items, so we unfortunately have to use the deprecated CGWindowList API.
-        return CGImage(windowListFromArrayScreenBounds: bounds, windowArray: array, imageOption: option)
+        // items, so we call CGWindowListCreateImageFromArray through a shim.
+        return CGWindowListCreateImageFromArray(bounds, array, option)?.takeRetainedValue()
     }
 
     /// Captures an image of a window.
